@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.models import Task
-from app.schemas.task import TaskCreate, TaskResponse
+from app.schemas.task import TaskCreate, TaskResponse, TaskUpdate
 
 router = APIRouter(
     prefix="/tasks",
@@ -39,3 +39,23 @@ def create_task(task: TaskCreate, db: Session = Depends(get_db)):
     db.refresh(new_task)
 
     return new_task
+
+@router.patch("/{task_id}", response_model=TaskResponse)
+def update_task(task_id: int, task: TaskUpdate, db: Session = Depends(get_db)):
+    existing_task = db.query(Task).filter(Task.id == task_id).first()
+
+    if existing_task is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Task not found"
+        )
+
+    update_data = task.model_dump(exclude_unset=True)
+
+    for field, value in update_data.items():
+        setattr(existing_task, field, value)
+
+    db.commit()
+    db.refresh(existing_task)
+
+    return existing_task
