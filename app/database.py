@@ -27,6 +27,25 @@ SessionLocal = sessionmaker(
     autocommit=False,
 )
 
+TEST_DATABASE_URL = os.getenv("TEST_DATABASE_URL")
+
+if not TEST_DATABASE_URL:
+    raise RuntimeError("TEST_DATABASE_URL is not set")
+
+test_connect_args = (
+    {"check_same_thread": False}
+    if TEST_DATABASE_URL.startswith("sqlite")
+    else {}
+)
+
+test_engine = create_engine(TEST_DATABASE_URL, connect_args=test_connect_args)
+
+TestSessionLocal = sessionmaker(
+    bind=test_engine,
+    autoflush=False,
+    autocommit=False,
+)
+
 
 class Base(DeclarativeBase):
     """Base class for SQLAlchemy models."""
@@ -34,6 +53,13 @@ class Base(DeclarativeBase):
 
 def get_db() -> Generator[Session, None, None]:
     db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
+
+def override_get_db() -> Generator[Session, None, None]:
+    db = TestSessionLocal()
     try:
         yield db
     finally:
