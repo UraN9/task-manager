@@ -36,3 +36,4 @@ def test_get_task_not_found():
     response = client.get("/tasks/999")
     assert response.status_code == 404
     assert response.json() == {"detail": "Task not found"}
+
